@@ -140,6 +140,7 @@ class XiaomiAirCondition(ClimateDevice):
                 partial(func, *args, **kwargs))
 
             _LOGGER.debug("Response received: %s", result)
+            self.schedule_update_ha_state()
 
             return result == SUCCESS
         except DeviceException as exc:
