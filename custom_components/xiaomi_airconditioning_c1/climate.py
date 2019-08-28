@@ -181,11 +181,12 @@ class XiaomiAirCondition(ClimateDevice):
             else:
                 self._hvac_mode = self._last_on_operation
                 self._state = True
+            self._target_temperature = state.target_temp
             self._current_temperature = state.temperature
             self._fan_mode = FanSpeed(state.wind_level).name
             self._swing_mode = SwingMode(state.swing).name
             self._state_attrs.update({
-                ATTR_TEMPERATURE: self._target_temperature,
+                ATTR_TEMPERATURE: state.target_temp,
                 ATTR_SWING_MODE: state.swing,
                 ATTR_FAN_MODE: state.wind_level,
                 ATTR_HVAC_MODE: state.mode.name.lower() if self._state else "off"
@@ -380,15 +381,10 @@ class AirConditionStatus:
         {'power': 1,
          'is_on': True,
          'mode': 2,
-         'temperature': 26.5,
+         'target_temp': 26.5
+         'temperature': 27,
          'swing': True,
-         'wind_level': 0,
-         'dry': True,
-         'energysave': True,
-         'sleep': True,
-         'light': True,
-         'beep': True,
-         'timer': '0,0,0,0'}
+         'wind_level': 0}
         """
         self.data = data
 
@@ -411,6 +407,11 @@ class AirConditionStatus:
             return None
 
     @property
+    def target_temp(self) -> float:
+        """Target temperature."""
+        return self.data['settemp']
+
+    @property
     def temperature(self) -> float:
         """Current temperature."""
         return self.data['temperature']
@@ -425,62 +426,22 @@ class AirConditionStatus:
         """Wind level."""
         return self.data['wind_level']
 
-    @property
-    def dry(self) -> bool:
-        """Dry mode"""
-        return self.data["dry"] == 1
-
-    @property
-    def energysave(self) -> bool:
-        """Energysave mode"""
-        return self.data['energysave'] == 1
-
-    @property
-    def sleep(self) -> bool:
-        """Sleep mode"""
-        return self.data['sleep'] == 1
-
-    @property
-    def light(self) -> bool:
-        """Light"""
-        return self.data['light'] == 1
-
-    @property
-    def beep(self) -> bool:
-        """Beep"""
-        return self.data['beep'] == 1
-
-    @property
-    def timer(self) -> str:
-        """Timer"""
-        return self.data['timer']
-
     def __repr__(self) -> str:
         s = "<AirConditionStatus " \
             "power=%s, " \
             "is_on=%s, " \
             "mode=%s, " \
+            "target_temp=%s, " \
             "temperature=%s, " \
             "swing=%s, " \
-            "wind level=%s, " \
-            "dry=%s, " \
-            "energysave=%s, " \
-            "sleep=%s, " \
-            "light=%s, " \
-            "beep=%s, " \
-            "timer=%s>" % \
+            "wind level=%s>" % \
             (self.power,
              self.is_on,
              self.mode,
+             self.target_temp,
              self.temperature,
              self.swing,
-             self.wind_level,
-             self.dry,
-             self.energysave,
-             self.sleep,
-             self.light,
-             self.beep,
-             self.timer)
+             self.wind_level)
         return s
 
     def __json__(self):
@@ -504,25 +465,38 @@ class AirCondition(Device):
             "",
             "Power: {result.power}\n"
             "Mode: {result.mode}\n"
+            "Target Temp: {result.target_temp} °C\n"
             "Temperature: {result.temperature} °C\n"
             "Wind Level: {result.wind_level}\n"
         )
     )
     def status(self) -> AirConditionStatus:
-        """Retrieve properties."""
+        """
+        Retrieve properties.
+        'power': 1          => 0 means off, 1 means on
+        'mode': 2           => 2 means cool, 3 means dry, 4 means fan only, 5 means heat
+        'settemp': 26.5     => target temperature
+        'temperature': 27   => current temperature
+        'swing': 0          => 0 means off, 1 means on
+        'wind_level': 0     => 0~7 mean auto,level 1 ~ level 7
+        'dry': 0            => 0 means off, 1 means on
+        'energysave': 0     => 0 means off, 1 means on
+        'sleep': 0          => 0 means off, 1 means on
+        'auxheat': 0        => 0 means off, 1 means on
+        'light': 1          => 0 means off, 1 means on
+        'beep': 1           => 0 means off, 1 means on
+        'timer': '0,0,0,0'
+        'clean': '0,0,0,1'
+        'examine': '0,0,"none"'
+        """
 
         properties = [
             'power',
             'mode',
+            'settemp',
             'temperature',
             'swing',
-            'wind_level',
-            'dry',
-            'energysave',
-            'sleep',
-            'light',
-            'beep',
-            'timer',
+            'wind_level'
         ]
 
         # Something weird. A single request is limited to 1 property.
