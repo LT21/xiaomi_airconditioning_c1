@@ -38,7 +38,7 @@ MODEL_AIRCONDITION_MA2 = 'xiaomi.aircondition.ma2'
 
 MODELS_SUPPORTED = [MODEL_AIRCONDITION_MA2]
 
-DEFAULT_NAME = 'Xiaomi Air Conditioning C1'
+DEFAULT_NAME = 'Xiaomi Mijia Air Conditioning C1'
 DATA_KEY = 'climate.xiaomi_airconditioning_c1'
 
 CONF_MIN_TEMP = 'min_temp'
@@ -130,7 +130,7 @@ class XiaomiAirCondition(ClimateDevice):
         self._swing_mode = None
         self._wind_level = None
         self._hvac_mode = None
-        self._target_temperature = 26
+        self._target_temperature = None
 
     @asyncio.coroutine
     def _try_command(self, mask_error, func, *args, **kwargs):
@@ -191,8 +191,6 @@ class XiaomiAirCondition(ClimateDevice):
                 ATTR_FAN_MODE: state.wind_level,
                 ATTR_HVAC_MODE: state.mode.name.lower() if self._state else "off"
             })
-
-
         except DeviceException as ex:
             self._available = False
             _LOGGER.error("Got exception while fetching the state: %s", ex)
