@@ -336,11 +336,15 @@ class XiaomiAirCondition(ClimateDevice):
             if self._hvac_mode == HVAC_MODE_OFF:
                 result = yield from self._try_command(
                 "Turning the miio device on failed.", self._device.on)
+                if not result:
+                    return
             self._hvac_mode = HVACMode(hvac_mode).value
             self._state = True
-            yield from self._try_command(
+            result = yield from self._try_command(
                 "Setting hvac mode of the miio device failed.",
                 self._device.set_mode, OperationMode[self._hvac_mode.title()])
+            if result:
+                self.async_update();
 
 
 class AirConditionException(DeviceException):
