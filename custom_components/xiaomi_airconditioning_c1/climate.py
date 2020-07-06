@@ -17,7 +17,7 @@ import voluptuous as vol
 
 from homeassistant.core import callback
 from homeassistant.components.climate import (
-    ClimateDevice, PLATFORM_SCHEMA, )
+    ClimateEntity, PLATFORM_SCHEMA, )
 from homeassistant.components.climate.const import (
     ATTR_HVAC_MODE, DOMAIN, HVAC_MODES, HVAC_MODE_OFF, HVAC_MODE_HEAT,
     HVAC_MODE_COOL, HVAC_MODE_AUTO, HVAC_MODE_DRY, HVAC_MODE_FAN_ONLY,
@@ -104,7 +104,7 @@ class HVACMode(enum.Enum):
     Heat = HVAC_MODE_HEAT
 
 
-class XiaomiAirCondition(ClimateDevice):
+class XiaomiAirCondition(ClimateEntity):
     """Representation of a Xiaomi Air Condition Companion."""
 
     def __init__(self, hass, name, device, unique_id,
