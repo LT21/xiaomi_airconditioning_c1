@@ -8,7 +8,8 @@ import asyncio
 from collections import defaultdict
 from typing import Optional
 import click
-from miio.device import Device, DeviceException
+from miio.device import Device
+from miio.exceptions import DeviceException
 from miio.click_common import command, format_output, EnumType
 
 from functools import partial
@@ -16,15 +17,31 @@ from datetime import timedelta
 import voluptuous as vol
 
 from homeassistant.core import callback
-from homeassistant.components.climate import (
-    ClimateDevice, PLATFORM_SCHEMA, )
+from homeassistant.components.climate import ClimateEntity, PLATFORM_SCHEMA
 from homeassistant.components.climate.const import (
-    ATTR_HVAC_MODE, DOMAIN, HVAC_MODES, HVAC_MODE_OFF, HVAC_MODE_HEAT,
-    HVAC_MODE_COOL, HVAC_MODE_AUTO, HVAC_MODE_DRY, HVAC_MODE_FAN_ONLY,
-    SUPPORT_SWING_MODE, SUPPORT_FAN_MODE, SUPPORT_TARGET_TEMPERATURE, )
+    ATTR_HVAC_MODE,
+    DOMAIN,
+    HVAC_MODES,
+    HVAC_MODE_OFF,
+    HVAC_MODE_HEAT,
+    HVAC_MODE_COOL,
+    HVAC_MODE_AUTO,
+    HVAC_MODE_DRY,
+    HVAC_MODE_FAN_ONLY,
+    SUPPORT_SWING_MODE,
+    SUPPORT_FAN_MODE,
+    SUPPORT_TARGET_TEMPERATURE,
+)
 from homeassistant.const import (
-    ATTR_ENTITY_ID, ATTR_TEMPERATURE, ATTR_UNIT_OF_MEASUREMENT, CONF_NAME,
-    CONF_HOST, CONF_TOKEN, CONF_TIMEOUT, TEMP_CELSIUS, )
+    ATTR_ENTITY_ID,
+    ATTR_TEMPERATURE,
+    ATTR_UNIT_OF_MEASUREMENT,
+    CONF_NAME,
+    CONF_HOST,
+    CONF_TOKEN,
+    CONF_TIMEOUT,
+    TEMP_CELSIUS,
+)
 from homeassistant.exceptions import PlatformNotReady
 from homeassistant.helpers.event import async_track_state_change
 import homeassistant.helpers.config_validation as cv
@@ -32,27 +49,25 @@ from homeassistant.util.dt import utcnow
 
 _LOGGER = logging.getLogger(__name__)
 
-SUCCESS = ['ok']
+SUCCESS = ["ok"]
 
-MODEL_AIRCONDITION_MA2 = 'xiaomi.aircondition.ma2'
+MODEL_AIRCONDITION_MA2 = "xiaomi.aircondition.ma2"
 
 MODELS_SUPPORTED = [MODEL_AIRCONDITION_MA2]
 
-DEFAULT_NAME = 'Xiaomi Mijia Air Conditioning C1'
-DATA_KEY = 'climate.xiaomi_airconditioning_c1'
+DEFAULT_NAME = "Xiaomi Mijia Air Conditioning C1"
+DATA_KEY = "climate.xiaomi_airconditioning_c1"
 
-CONF_MIN_TEMP = 'min_temp'
-CONF_MAX_TEMP = 'max_temp'
+CONF_MIN_TEMP = "min_temp"
+CONF_MAX_TEMP = "max_temp"
 
-ATTR_SWING_MODE = 'swing_mode'
-ATTR_FAN_MODE = 'fan_mode'
-ATTR_WIND_LEVEL = 'wind_level'
+ATTR_SWING_MODE = "swing_mode"
+ATTR_FAN_MODE = "fan_mode"
+ATTR_WIND_LEVEL = "wind_level"
 
 SCAN_INTERVAL = timedelta(seconds=15)
 
-SUPPORT_FLAGS = (SUPPORT_TARGET_TEMPERATURE |
-                 SUPPORT_FAN_MODE |
-                 SUPPORT_SWING_MODE)
+SUPPORT_FLAGS = SUPPORT_TARGET_TEMPERATURE | SUPPORT_FAN_MODE | SUPPORT_SWING_MODE
 
 PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({
     vol.Required(CONF_HOST): cv.string,
@@ -82,16 +97,17 @@ def async_setup_platform(hass, config, async_add_devices, discovery_info=None):
         device_info = device.info()
         model = device_info.model
         unique_id = "{}-{}".format(model, device_info.mac_address)
-        _LOGGER.info("model[ %s ] firmware_ver[ %s ] hardware_ver[ %s ] detected",
-                     model,
-                     device_info.firmware_version,
-                     device_info.hardware_version)
+        _LOGGER.info(
+            "model[ %s ] firmware_ver[ %s ] hardware_ver[ %s ] detected",
+            model,
+            device_info.firmware_version,
+            device_info.hardware_version
+        )
     except DeviceException as ex:
         _LOGGER.error("Device unavailable or token incorrect: %s", ex)
         raise PlatformNotReady
 
-    air_condition_companion = XiaomiAirCondition(
-        hass, name, device, unique_id, min_temp, max_temp)
+    air_condition_companion = XiaomiAirCondition(hass, name, device, unique_id, min_temp, max_temp)
     hass.data[DATA_KEY][host] = air_condition_companion
     async_add_devices([air_condition_companion], update_before_add=True)
 
@@ -104,11 +120,10 @@ class HVACMode(enum.Enum):
     Heat = HVAC_MODE_HEAT
 
 
-class XiaomiAirCondition(ClimateDevice):
+class XiaomiAirCondition(ClimateEntity):
     """Representation of a Xiaomi Air Condition Companion."""
 
-    def __init__(self, hass, name, device, unique_id,
-                 min_temp, max_temp):
+    def __init__(self, hass, name, device, unique_id, min_temp, max_temp):
 
         """Initialize the climate device."""
         self.hass = hass
@@ -151,8 +166,7 @@ class XiaomiAirCondition(ClimateDevice):
     @asyncio.coroutine
     def async_turn_on(self, speed: str = None, **kwargs) -> None:
         """Turn the miio device on."""
-        result = yield from self._try_command(
-            "Turning the miio device on failed.", self._device.on)
+        result = yield from self._try_command("Turning the miio device on failed.", self._device.on)
 
         if result:
             self._state = True
@@ -160,8 +174,7 @@ class XiaomiAirCondition(ClimateDevice):
     @asyncio.coroutine
     def async_turn_off(self, **kwargs) -> None:
         """Turn the miio device off."""
-        result = yield from self._try_command(
-            "Turning the miio device off failed.", self._device.off)
+        result = yield from self._try_command("Turning the miio device off failed.", self._device.off)
 
         if result:
             self._state = False
@@ -293,7 +306,8 @@ class XiaomiAirCondition(ClimateDevice):
 
         yield from self._try_command(
             "Setting temperature of the miio device failed.",
-            self._device.set_temperature, self._target_temperature)
+            self._device.set_temperature, self._target_temperature
+        )
 
     @asyncio.coroutine
     def async_set_swing_mode(self, swing_mode):
@@ -305,7 +319,8 @@ class XiaomiAirCondition(ClimateDevice):
 
         yield from  self._try_command(
             "Setting swing mode of the miio device failed.",
-            self._device.set_swing, self._swing_mode == SwingMode.On.name)
+            self._device.set_swing, self._swing_mode == SwingMode.On.name
+        )
 
     @asyncio.coroutine
     def async_set_fan_mode(self, fan_mode):
@@ -321,28 +336,32 @@ class XiaomiAirCondition(ClimateDevice):
 
         yield from self._try_command(
             "Setting fan mode of the miio device failed.",
-            self._device.set_wind_level, fan_mode_value)
+            self._device.set_wind_level, fan_mode_value
+        )
 
     @asyncio.coroutine
     def async_set_hvac_mode(self, hvac_mode):
         """Set new target hvac mode."""
         if hvac_mode == HVAC_MODE_OFF:
             result = yield from self._try_command(
-                "Turning the miio device off failed.", self._device.off)
+                "Turning the miio device off failed.", self._device.off
+            )
             if result:
                 self._state = False
                 self._hvac_mode = HVAC_MODE_OFF
         else:
             if self._hvac_mode == HVAC_MODE_OFF:
                 result = yield from self._try_command(
-                "Turning the miio device on failed.", self._device.on)
+                "Turning the miio device on failed.", self._device.on
+            )
                 if not result:
                     return
             self._hvac_mode = HVACMode(hvac_mode).value
             self._state = True
             result = yield from self._try_command(
                 "Setting hvac mode of the miio device failed.",
-                self._device.set_mode, OperationMode[self._hvac_mode.title()])
+                self._device.set_mode, OperationMode[self._hvac_mode.title()]
+            )
             if result:
                 self.async_update();
 
@@ -380,20 +399,20 @@ class AirConditionStatus:
     def __init__(self, data):
         """
         Device model: zhimi.aircondition.ma1
-        {'power': 1,
-         'is_on': True,
-         'mode': 2,
-         'target_temp': 26.5
-         'temperature': 27,
-         'swing': True,
-         'wind_level': 0}
+        {"power": 1,
+         "is_on": True,
+         "mode": 2,
+         "target_temp": 26.5
+         "temperature": 27,
+         "swing": True,
+         "wind_level": 0}
         """
         self.data = data
 
     @property
     def power(self) -> int:
         """Current power state."""
-        return self.data['power']
+        return self.data["power"]
 
     @property
     def is_on(self) -> bool:
@@ -404,29 +423,29 @@ class AirConditionStatus:
     def mode(self) -> Optional[OperationMode]:
         """Current operation mode."""
         try:
-            return OperationMode(self.data['mode'])
+            return OperationMode(self.data["mode"])
         except TypeError:
             return None
 
     @property
     def target_temp(self) -> float:
         """Target temperature."""
-        return self.data['settemp']
+        return self.data["settemp"]
 
     @property
     def temperature(self) -> float:
         """Current temperature."""
-        return self.data['temperature']
+        return self.data["temperature"]
 
     @property
     def swing(self) -> int:
         """Vertical swing."""
-        return self.data['swing']
+        return self.data["swing"]
 
     @property
     def wind_level(self) -> int:
         """Wind level."""
-        return self.data['wind_level']
+        return self.data["wind_level"]
 
     def __repr__(self) -> str:
         s = "<AirConditionStatus " \
@@ -475,30 +494,30 @@ class AirCondition(Device):
     def status(self) -> AirConditionStatus:
         """
         Retrieve properties.
-        'power': 1          => 0 means off, 1 means on
-        'mode': 2           => 2 means cool, 3 means dry, 4 means fan only, 5 means heat
-        'settemp': 26.5     => target temperature
-        'temperature': 27   => current temperature
-        'swing': 0          => 0 means off, 1 means on
-        'wind_level': 0     => 0~7 mean auto,level 1 ~ level 7
-        'dry': 0            => 0 means off, 1 means on
-        'energysave': 0     => 0 means off, 1 means on
-        'sleep': 0          => 0 means off, 1 means on
-        'auxheat': 0        => 0 means off, 1 means on
-        'light': 1          => 0 means off, 1 means on
-        'beep': 1           => 0 means off, 1 means on
-        'timer': '0,0,0,0'
-        'clean': '0,0,0,1'
-        'examine': '0,0,"none"'
+        "power": 1          => 0 means off, 1 means on
+        "mode": 2           => 2 means cool, 3 means dry, 4 means fan only, 5 means heat
+        "settemp": 26.5     => target temperature
+        "temperature": 27   => current temperature
+        "swing": 0          => 0 means off, 1 means on
+        "wind_level": 0     => 0~7 mean auto,level 1 ~ level 7
+        "dry": 0            => 0 means off, 1 means on
+        "energysave": 0     => 0 means off, 1 means on
+        "sleep": 0          => 0 means off, 1 means on
+        "auxheat": 0        => 0 means off, 1 means on
+        "light": 1          => 0 means off, 1 means on
+        "beep": 1           => 0 means off, 1 means on
+        "timer": "0,0,0,0"
+        "clean": "0,0,0,1"
+        "examine": "0,0,"none""
         """
 
         properties = [
-            'power',
-            'mode',
-            'settemp',
-            'temperature',
-            'swing',
-            'wind_level'
+            "power",
+            "mode",
+            "settemp",
+            "temperature",
+            "swing",
+            "wind_level"
         ]
 
         # Something weird. A single request is limited to 1 property.
@@ -515,7 +534,8 @@ class AirCondition(Device):
             _LOGGER.debug(
                 "Count (%s) of requested properties does not match the "
                 "count (%s) of received values.",
-                properties_count, values_count)
+                properties_count, values_count
+            )
 
         return AirConditionStatus(
             defaultdict(lambda: None, zip(properties, values)))
@@ -536,8 +556,7 @@ class AirCondition(Device):
 
     @command(
         click.argument("temperature", type=float),
-        default_output=format_output(
-            "Setting target temperature to {temperature} degrees")
+        default_output=format_output("Setting target temperature to {temperature} degrees")
     )
     def set_temperature(self, temperature: float):
         """Set target temperature."""
@@ -545,8 +564,7 @@ class AirCondition(Device):
 
     @command(
         click.argument("wind_level", type=int),
-        default_output=format_output(
-            "Setting wind level to {wind_level}")
+        default_output=format_output("Setting wind level to {wind_level}")
     )
     def set_wind_level(self, wind_level: int):
         """Set wind level."""
