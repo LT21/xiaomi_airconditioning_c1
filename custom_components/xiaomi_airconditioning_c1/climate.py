@@ -1,9 +1,9 @@
 """
 Support for Xiaomi Air Conditioning C1
 """
+import asyncio
 import enum
 import logging
-import asyncio
 
 from collections import defaultdict
 from typing import Optional
@@ -20,7 +20,6 @@ from homeassistant.core import callback
 from homeassistant.components.climate import ClimateEntity, PLATFORM_SCHEMA
 from homeassistant.components.climate.const import (
     ATTR_HVAC_MODE,
-    DOMAIN,
     HVAC_MODES,
     HVAC_MODE_OFF,
     HVAC_MODE_HEAT,
@@ -41,6 +40,7 @@ from homeassistant.const import (
     CONF_TOKEN,
     CONF_TIMEOUT,
     TEMP_CELSIUS,
+    STATE_ON,
 )
 from homeassistant.exceptions import PlatformNotReady
 from homeassistant.helpers.event import async_track_state_change
@@ -57,6 +57,8 @@ MODELS_SUPPORTED = [MODEL_AIRCONDITION_MA2]
 
 DEFAULT_NAME = "Xiaomi Mijia Air Conditioning C1"
 DATA_KEY = "climate.xiaomi_airconditioning_c1"
+DOMAIN = "xiaomi_airconditioning_c1"
+TARGET_TEMPERATURE_STEP = 1
 
 CONF_MIN_TEMP = "min_temp"
 CONF_MAX_TEMP = "max_temp"
@@ -473,13 +475,10 @@ class AirCondition(Device):
 
     def __init__(self, ip: str = None, token: str = None, model: str = MODEL_AIRCONDITION_MA2,
                  start_id: int = 0, debug: int = 0, lazy_discover: bool = True) -> None:
-        super().__init__(ip, token, start_id, debug, lazy_discover)
+        super().__init__(ip, token, start_id, debug, lazy_discover, model=model)
 
-        if model in MODELS_SUPPORTED:
-            self.model = model
-        else:
-            self.model = MODEL_AIRCONDITION_MA2
-            _LOGGER.debug("Device model %s unsupported. Falling back to %s.", model, self.model)
+        if self.model not in MODELS_SUPPORTED:
+            _LOGGER.error("Device model %s unsupported. Falling back to %s.", model, self.model)
 
     @command(
         default_output=format_output(
