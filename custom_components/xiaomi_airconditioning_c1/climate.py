@@ -20,7 +20,6 @@ from homeassistant.core import callback
 from homeassistant.components.climate import ClimateEntity, PLATFORM_SCHEMA
 from homeassistant.components.climate.const import (
     ATTR_HVAC_MODE,
-    HVAC_MODES,
     HVAC_MODE_OFF,
     HVAC_MODE_HEAT,
     HVAC_MODE_COOL,
@@ -80,8 +79,7 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({
 })
 
 # pylint: disable=unused-argument
-@asyncio.coroutine
-def async_setup_platform(hass, config, async_add_devices, discovery_info=None):
+async def async_setup_platform(hass, config, async_add_devices, discovery_info=None):
     """Set up the air condition companion from config."""
     if DATA_KEY not in hass.data:
         hass.data[DATA_KEY] = {}
@@ -149,12 +147,10 @@ class XiaomiAirCondition(ClimateEntity):
         self._hvac_mode = None
         self._target_temperature = None
 
-    @asyncio.coroutine
-    def _try_command(self, mask_error, func, *args, **kwargs):
+    async def _try_command(self, mask_error, func, *args, **kwargs):
         """Call a command handling error messages."""
         try:
-            result = yield from self.hass.async_add_job(
-                partial(func, *args, **kwargs))
+            result = await self.hass.async_add_job(partial(func, *args, **kwargs))
 
             _LOGGER.debug("Response received: %s", result)
             self.schedule_update_ha_state()
@@ -165,27 +161,24 @@ class XiaomiAirCondition(ClimateEntity):
             self._available = False
             return False
 
-    @asyncio.coroutine
-    def async_turn_on(self, speed: str = None, **kwargs) -> None:
+    async def async_turn_on(self, speed: str = None, **kwargs) -> None:
         """Turn the miio device on."""
-        result = yield from self._try_command("Turning the miio device on failed.", self._device.on)
+        result = await self._try_command("Turning the miio device on failed.", self._device.on)
 
         if result:
             self._state = True
 
-    @asyncio.coroutine
-    def async_turn_off(self, **kwargs) -> None:
+    async def async_turn_off(self, **kwargs) -> None:
         """Turn the miio device off."""
-        result = yield from self._try_command("Turning the miio device off failed.", self._device.off)
+        result = await self._try_command("Turning the miio device off failed.", self._device.off)
 
         if result:
             self._state = False
 
-    @asyncio.coroutine
-    def async_update(self):
+    async def async_update(self):
         """Update the state of this climate device."""
         try:
-            state = yield from self.hass.async_add_job(self._device.status)
+            state = await self.hass.async_add_job(self._device.status)
             _LOGGER.debug("new state: %s", state)
 
             self._available = True
@@ -295,8 +288,7 @@ class XiaomiAirCondition(ClimateEntity):
         """Return the list of available fan modes."""
         return [speed.name for speed in FanSpeed]
 
-    @asyncio.coroutine
-    def async_set_temperature(self, **kwargs):
+    async def async_set_temperature(self, **kwargs):
         """Set target temperature."""
         if self._hvac_mode == HVAC_MODE_OFF or self._hvac_mode == HVAC_MODE_FAN_ONLY:
             return;
@@ -306,26 +298,24 @@ class XiaomiAirCondition(ClimateEntity):
         if kwargs.get(ATTR_HVAC_MODE) is not None:
             self._hvac_mode = OperationMode(kwargs.get(ATTR_HVAC_MODE))
 
-        yield from self._try_command(
+        await self._try_command(
             "Setting temperature of the miio device failed.",
             self._device.set_temperature, self._target_temperature
         )
 
-    @asyncio.coroutine
-    def async_set_swing_mode(self, swing_mode):
+    async def async_set_swing_mode(self, swing_mode):
         """Set the swing mode."""
         if self.supported_features & SUPPORT_SWING_MODE == 0:
             return
 
         self._swing_mode = SwingMode[swing_mode.title()].name
 
-        yield from  self._try_command(
+        await self._try_command(
             "Setting swing mode of the miio device failed.",
             self._device.set_swing, self._swing_mode == SwingMode.On.name
         )
 
-    @asyncio.coroutine
-    def async_set_fan_mode(self, fan_mode):
+    async def async_set_fan_mode(self, fan_mode):
         """Set the fan mode."""
         if self.supported_features & SUPPORT_FAN_MODE == 0:
             return
@@ -336,34 +326,26 @@ class XiaomiAirCondition(ClimateEntity):
         self._fan_mode = FanSpeed[fan_mode.title()].name
         fan_mode_value = FanSpeed[fan_mode.title()].value
 
-        yield from self._try_command(
+        await self._try_command(
             "Setting fan mode of the miio device failed.",
             self._device.set_wind_level, fan_mode_value
         )
 
-    @asyncio.coroutine
-    def async_set_hvac_mode(self, hvac_mode):
+    async def async_set_hvac_mode(self, hvac_mode):
         """Set new target hvac mode."""
         if hvac_mode == HVAC_MODE_OFF:
-            result = yield from self._try_command(
-                "Turning the miio device off failed.", self._device.off
-            )
+            result = await self._try_command("Turning the miio device off failed.", self._device.off)
             if result:
                 self._state = False
                 self._hvac_mode = HVAC_MODE_OFF
         else:
             if self._hvac_mode == HVAC_MODE_OFF:
-                result = yield from self._try_command(
-                "Turning the miio device on failed.", self._device.on
-            )
+                result = await self._try_command("Turning the miio device on failed.", self._device.on)
                 if not result:
                     return
             self._hvac_mode = HVACMode(hvac_mode).value
             self._state = True
-            result = yield from self._try_command(
-                "Setting hvac mode of the miio device failed.",
-                self._device.set_mode, OperationMode[self._hvac_mode.title()]
-            )
+            result = await self._try_command("Setting hvac mode of the miio device failed.", self._device.set_mode, OperationMode[self._hvac_mode.title()])
             if result:
                 self.async_update();
 

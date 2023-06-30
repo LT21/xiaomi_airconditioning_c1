@@ -2,12 +2,13 @@
   "domain": "xiaomi_airconditioning_c1",
   "name": "Xiaomi Air Conditioning C1",
   "config_flow": false,
-  "version": "0.0.5",
+  "version": "0.0.6",
   "documentation": "https://github.com/LT21/xiaomi_airconditioning_c1",
   "issue_tracker": "https://github.com/LT21/xiaomi_airconditioning_c1/issues",
+  "iot_class": "local_polling",
   "requirements": [
     "construct==2.10.56",
-    "python-miio>=0.5.9.2"
+    "python-miio>=0.5.12"
   ],
   "dependencies": ["sensor"],
   "codeowners": ["@LT21"]
